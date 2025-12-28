@@ -19,19 +19,26 @@ class ProfilerService:
                 strategies = [
                     ResolutionStrategy(name="Drop Rows", description="Remove rows with missing values",
                                        action_code="drop_rows"),
-                    ResolutionStrategy(name="Fill with Mode", description="Replace with most frequent value",
-                                       action_code="fill_mode"),
                     ResolutionStrategy(name="Ignore", description="Keep data as is", action_code="ignore")
                 ]
 
+                # Context-Aware Strategy Injection
                 if pd.api.types.is_numeric_dtype(df[col]):
-                    strategies.insert(1, ResolutionStrategy(name="Fill with Mean", description="Replace with average",
-                                                            action_code="fill_mean"))
-                    strategies.insert(2, ResolutionStrategy(name="Fill with Median", description="Replace with median",
+                    strategies.insert(1, ResolutionStrategy(name="Fill with Median",
+                                                            description="Robust fill for skewed data",
                                                             action_code="fill_median"))
+                    strategies.insert(2, ResolutionStrategy(name="Fill with Mean",
+                                                            description="Standard fill for normal data",
+                                                            action_code="fill_mean"))
+                    strategies.insert(3, ResolutionStrategy(name="Forward Fill",
+                                                            description="Propagate last valid observation",
+                                                            action_code="ffill"))
                 else:
-                    strategies.insert(1, ResolutionStrategy(name="Fill 'Unknown'",
-                                                            description="Replace with 'Unknown' string",
+                    strategies.insert(1, ResolutionStrategy(name="Fill with Mode",
+                                                            description="Replace with most frequent value",
+                                                            action_code="fill_mode"))
+                    strategies.insert(2, ResolutionStrategy(name="Fill 'Unknown'",
+                                                            description="Explicitly label as Unknown",
                                                             action_code="fill_unknown"))
 
                 issues.append(DetectedIssue(
@@ -63,26 +70,28 @@ class ProfilerService:
                 ]
             ))
 
-        # 3. Numeric Outliers (IQR Method)
+        # 3. Numeric Outliers (Skip IDs)
         numeric_cols = df.select_dtypes(include=[np.number]).columns
         for col in numeric_cols:
+            # Smart Skip: Don't check ID columns for outliers
+            if "id" in col.lower() or "key" in col.lower() or "code" in col.lower():
+                continue
+
             Q1 = df[col].quantile(0.25)
             Q3 = df[col].quantile(0.75)
             IQR = Q3 - Q1
-            # Standard outlier definition: 1.5 * IQR
             outliers = ((df[col] < (Q1 - 1.5 * IQR)) | (df[col] > (Q3 + 1.5 * IQR))).sum()
 
             if outliers > 0:
                 pct = (outliers / len(df)) * 100
-                # Only flag if significant but not overwhelming
-                if 0 < pct < 10:
+                if 0 < pct < 15:  # Only flag if it's a small percentage (true outliers)
                     issues.append(DetectedIssue(
                         id=str(uuid.uuid4()),
                         type=IssueType.OUTLIERS,
                         column=col,
-                        description=f"Column '{col}' has {outliers} potential outliers.",
+                        description=f"Column '{col}' has {outliers} outliers.",
                         severity=Severity.MEDIUM,
-                        impact="Outliers skew averages and distort axis scaling in charts.",
+                        impact="Outliers skew averages and distort visualizations.",
                         row_count=int(outliers),
                         strategies=[
                             ResolutionStrategy(name="Clip Values", description="Cap values at min/max thresholds",
@@ -93,24 +102,55 @@ class ProfilerService:
                         ]
                     ))
 
-        # 4. High Cardinality (Visualization Risk)
-        object_cols = df.select_dtypes(include=['object', 'category']).columns
+        # 4. Inconsistent Types (Numbers as Strings)
+        object_cols = df.select_dtypes(include=['object']).columns
         for col in object_cols:
-            unique_count = df[col].nunique()
-            if unique_count > 50 and unique_count < len(df):
+            # Try to force convert to numeric
+            numeric_conversion = pd.to_numeric(df[col], errors='coerce')
+            num_valid = numeric_conversion.notna().sum()
+
+            # If >80% are numbers but the column is Object, it's a dirty numeric column
+            if num_valid > 0.8 * len(df) and num_valid < len(df):
                 issues.append(DetectedIssue(
                     id=str(uuid.uuid4()),
-                    type=IssueType.VISUALIZATION_RISK,
+                    type=IssueType.INCONSISTENT_TYPE,
                     column=col,
-                    description=f"Column '{col}' has {unique_count} unique values (High Cardinality).",
-                    severity=Severity.LOW,
-                    impact="Cannot be used effectively in Bar or Pie charts. Will clutter visualization.",
+                    description=f"Column '{col}' looks numeric but contains text/garbage.",
+                    severity=Severity.HIGH,
+                    impact="Prevents mathematical operations and sorting.",
                     row_count=len(df),
                     strategies=[
-                        ResolutionStrategy(name="Group Rare Labels", description="Group infrequent values into 'Other'",
-                                           action_code="group_rare"),
-                        ResolutionStrategy(name="Ignore", description="Keep all categories", action_code="ignore")
+                        ResolutionStrategy(name="Convert to Numeric", description="Force conversion (text becomes NaN)",
+                                           action_code="convert_numeric"),
+                        ResolutionStrategy(name="Ignore", description="Keep as text", action_code="ignore")
                     ]
                 ))
+
+        # 5. Text Inconsistency (Case sensitivity)
+        for col in object_cols:
+            if df[col].nunique() < 50:  # Only check low cardinality columns
+                # Count unique values
+                unique_vals = df[col].dropna().unique()
+                # Count unique values if we lower-case everything
+                unique_lower = set(x.lower() for x in unique_vals if isinstance(x, str))
+
+                # If lowering case reduces unique count, we have inconsistencies (e.g. "North" vs "north")
+                if len(unique_lower) < len(unique_vals):
+                    issues.append(DetectedIssue(
+                        id=str(uuid.uuid4()),
+                        type=IssueType.TEXT_INCONSISTENCY,
+                        column=col,
+                        description=f"Column '{col}' has inconsistent text casing (e.g., 'A' vs 'a').",
+                        severity=Severity.LOW,
+                        impact="Splits identical categories into separate groups in charts.",
+                        row_count=len(df),
+                        strategies=[
+                            ResolutionStrategy(name="Standardize (Title Case)", description="Convert to 'Title Case'",
+                                               action_code="title_case"),
+                            ResolutionStrategy(name="Standardize (Lower Case)", description="Convert to 'lower case'",
+                                               action_code="lower_case"),
+                            ResolutionStrategy(name="Ignore", description="Keep as is", action_code="ignore")
+                        ]
+                    ))
 
         return issues

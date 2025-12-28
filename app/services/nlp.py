@@ -1,17 +1,13 @@
 from typing import List, Tuple, Dict, Any
-from app.models import DetectedIssue
+from app.models import DetectedIssue, IssueType
 
 
 class NLPService:
     @staticmethod
     def interpret_command(command: str, issues: List[DetectedIssue]) -> List[Tuple[str, str]]:
-        """
-        Returns a list of (issue_id, strategy_code) based on natural language.
-        """
         command = command.lower()
         actions = []
 
-        # Intent: Fix High Severity
         if "high" in command or "critical" in command or "severe" in command:
             for issue in issues:
                 if issue.severity == "High":
@@ -19,22 +15,23 @@ class NLPService:
                     if strategy:
                         actions.append((issue.id, strategy))
 
-        # Intent: Fix Missing Values
         elif "missing" in command or "null" in command or "empty" in command:
             for issue in issues:
-                if issue.type == "Missing Values":
+                if issue.type == IssueType.MISSING_VALUES:
                     strategy = NLPService._get_default_strategy(issue)
                     if strategy:
                         actions.append((issue.id, strategy))
 
-        # Intent: Fix Visualization risks
-        elif "chart" in command or "viz" in command or "bar" in command:
+        elif "text" in command or "case" in command:
             for issue in issues:
-                if issue.type == "Visualization Risk":
-                    strategy = "group_rare"
-                    actions.append((issue.id, strategy))
+                if issue.type == IssueType.TEXT_INCONSISTENCY:
+                    actions.append((issue.id, "title_case"))
 
-        # Intent: Fix Everything
+        elif "type" in command or "number" in command:
+            for issue in issues:
+                if issue.type == IssueType.INCONSISTENT_TYPE:
+                    actions.append((issue.id, "convert_numeric"))
+
         elif "all" in command or "everything" in command:
             for issue in issues:
                 strategy = NLPService._get_default_strategy(issue)
@@ -45,29 +42,25 @@ class NLPService:
 
     @staticmethod
     def generate_insight(issues: List[DetectedIssue]) -> Dict[str, Any]:
-        """
-        Generates a proactive insight summary and a recommended action plan.
-        """
         high_sev = [i for i in issues if i.severity == "High"]
 
         insight_text = ""
         actions = []
 
-        # 1. Generate Narrative (The "Why")
         if not issues:
             insight_text = "Great news! The dataset appears to be clean. No major issues were detected."
         else:
             insight_text = f"I have analyzed your data and found {len(issues)} quality issues. "
 
             if high_sev:
-                insight_text += f"Most critically, there are {len(high_sev)} high-severity issues (like {high_sev[0].type}) that will break downstream analysis or cause calculations to fail. "
+                insight_text += f"Most critically, there are {len(high_sev)} high-severity issues. "
+                if any(i.type == IssueType.INCONSISTENT_TYPE for i in high_sev):
+                    insight_text += "Some columns look like numbers but are stored as text. "
+                if any(i.type == IssueType.DUPLICATES for i in high_sev):
+                    insight_text += "There are also duplicate rows found. "
 
-            if any(i.type == "Visualization Risk" for i in issues):
-                insight_text += "I also noticed high-cardinality columns that will make your charts unreadable. "
+            insight_text += "I've created a custom cleaning plan to standardize these values."
 
-            insight_text += "I have prepared a cleaning plan to fix these problems automatically."
-
-        # 2. Generate Auto-Fix Plan (Heuristic based)
         for issue in issues:
             strategy = NLPService._get_default_strategy(issue)
             if strategy and strategy != "ignore":
@@ -81,21 +74,35 @@ class NLPService:
 
     @staticmethod
     def _get_default_strategy(issue: DetectedIssue) -> str:
-        """Heuristic for best default action."""
-        if issue.type == "Duplicates":
+        """
+        Smart Heuristics for Default Actions.
+        This is the 'Brain' of the AI recommendation system.
+        """
+        if issue.type == IssueType.DUPLICATES:
             return "remove_duplicates"
 
-        if issue.type == "Missing Values":
-            if issue.row_count / 1000 < 0.05:
+        if issue.type == IssueType.MISSING_VALUES:
+            # If it's a very small amount of missing data, dropping is safest.
+            if issue.row_count < 20 or issue.row_count / 1000 < 0.05:
                 return "drop_rows"
+            # If the column name suggests a sequence (like time), use ffill
+            if issue.column and ("date" in issue.column.lower() or "time" in issue.column.lower()):
+                return "ffill"
             if "Numeric" in str(issue.description):
-                return "fill_median"
+                return "fill_median"  # Median is safer than mean for un-reviewed data
             return "fill_mode"
 
-        if issue.type == "Outliers":
+        if issue.type == IssueType.OUTLIERS:
+            # We already skipped IDs in the profiler, so clipping is generally safe for measurements
             return "clip_outliers"
 
-        if issue.type == "Visualization Risk":
+        if issue.type == IssueType.VISUALIZATION_RISK:
             return "group_rare"
+
+        if issue.type == IssueType.INCONSISTENT_TYPE:
+            return "convert_numeric"
+
+        if issue.type == IssueType.TEXT_INCONSISTENCY:
+            return "title_case"  # Safest default for names/categories
 
         return "ignore"

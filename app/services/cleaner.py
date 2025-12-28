@@ -6,10 +6,6 @@ from app.models import CleaningReport, DetectedIssue
 class CleanerService:
     @staticmethod
     def apply_fixes(df: pd.DataFrame, fixes: list, issues_map: dict) -> tuple[pd.DataFrame, list]:
-        """
-        Applies fixes sequentially.
-        fixes: List of dicts {issue_id, strategy_code}
-        """
         audit_log = []
         df_clean = df.copy()
 
@@ -46,6 +42,9 @@ class CleanerService:
             elif code == "fill_unknown":
                 df_clean[col] = df_clean[col].fillna("Unknown")
                 audit_log.append(f"Filled missing '{col}' with 'Unknown'")
+            elif code == "ffill":
+                df_clean[col] = df_clean[col].ffill()
+                audit_log.append(f"Forward-filled missing values in '{col}'")
 
             # --- Duplicates ---
             elif code == "remove_duplicates":
@@ -69,6 +68,21 @@ class CleanerService:
                 mask = ~((df_clean[col] < (Q1 - 1.5 * IQR)) | (df_clean[col] > (Q3 + 1.5 * IQR)))
                 df_clean = df_clean[mask]
                 audit_log.append(f"Dropped outlier rows in '{col}'")
+
+            # --- Text & Type Inconsistencies ---
+            elif code == "convert_numeric":
+                # Coerce to numeric, setting errors (text) to NaN, then we might need to fill those NaNs later
+                # For this step, we just convert.
+                df_clean[col] = pd.to_numeric(df_clean[col], errors='coerce')
+                audit_log.append(f"Converted '{col}' to Numeric (invalid values set to NaN)")
+
+            elif code == "title_case":
+                df_clean[col] = df_clean[col].astype(str).str.title()
+                audit_log.append(f"Standardized '{col}' to Title Case")
+
+            elif code == "lower_case":
+                df_clean[col] = df_clean[col].astype(str).str.lower()
+                audit_log.append(f"Standardized '{col}' to Lower Case")
 
             # --- Viz Risks ---
             elif code == "group_rare":

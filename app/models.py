@@ -11,9 +11,9 @@ class IssueType(str, Enum):
     MISSING_VALUES = "Missing Values"
     DUPLICATES = "Duplicates"
     OUTLIERS = "Outliers"
-    INCONSISTENT_TYPE = "Inconsistent Type"
+    INCONSISTENT_TYPE = "Inconsistent Type" # e.g. Numbers as Strings
+    TEXT_INCONSISTENCY = "Text Inconsistency" # e.g. "north" vs "North"
     VISUALIZATION_RISK = "Visualization Risk"
-    DATA_INTEGRITY = "Data Integrity"
 
 class ResolutionStrategy(BaseModel):
     name: str
@@ -37,7 +37,7 @@ class DatasetProfile(BaseModel):
     columns: List[str]
     issues: List[DetectedIssue]
     sample_data: List[Dict[str, Any]]
-    session_id: str  # <--- CRITICAL FIELD
+    session_id: str
 
 class FixRequest(BaseModel):
     issue_id: str

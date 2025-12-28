@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Explain-Clean AI</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script> <!-- Added Chart.js -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
         .drag-active { border-color: #3b82f6; background-color: #eff6ff; }
@@ -58,39 +59,50 @@
             <!-- Step 2: Dashboard (Initially Hidden) -->
             <section id="dashboard-section" class="hidden space-y-6">
 
-                <!-- Stats Row -->
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div class="bg-white p-4 rounded-lg shadow border-l-4 border-blue-500">
-                        <p class="text-xs text-gray-500 uppercase">Rows</p>
-                        <p class="text-2xl font-bold" id="stat-rows">-</p>
-                    </div>
-                    <div class="bg-white p-4 rounded-lg shadow border-l-4 border-purple-500">
-                        <p class="text-xs text-gray-500 uppercase">Columns</p>
-                        <p class="text-2xl font-bold" id="stat-cols">-</p>
-                    </div>
-                    <div class="bg-white p-4 rounded-lg shadow border-l-4 border-red-500">
-                        <p class="text-xs text-gray-500 uppercase">Issues Detected</p>
-                        <p class="text-2xl font-bold" id="stat-issues">-</p>
-                    </div>
-                </div>
-
-                <!-- AI Insights Panel -->
-                <div class="bg-gradient-to-r from-indigo-600 to-blue-600 rounded-lg p-6 shadow-lg text-white">
-                    <div class="flex items-start gap-4">
-                        <div class="bg-white/20 p-3 rounded-full">
-                            <i class="fa-solid fa-robot text-2xl"></i>
+                <!-- Top Row: Stats & Health Chart -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <!-- Stats Column -->
+                    <div class="md:col-span-2 grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div class="bg-white p-4 rounded-lg shadow border-l-4 border-blue-500">
+                            <p class="text-xs text-gray-500 uppercase">Rows</p>
+                            <p class="text-2xl font-bold" id="stat-rows">-</p>
                         </div>
-                        <div class="flex-1">
-                            <h3 class="font-bold text-lg mb-1">AI Data Insight</h3>
-                            <p id="ai-insight-text" class="text-blue-100 text-sm leading-relaxed mb-4">
-                                Analyzing your data structure...
-                            </p>
-                            <div id="ai-actions" class="hidden">
-                                <button type="button" onclick="applyAiPlan()" class="bg-white text-blue-600 px-4 py-2 rounded font-bold text-sm shadow hover:bg-gray-100 transition">
-                                    <i class="fa-solid fa-wand-magic-sparkles mr-2"></i> Apply Recommended Plan
-                                </button>
+                        <div class="bg-white p-4 rounded-lg shadow border-l-4 border-purple-500">
+                            <p class="text-xs text-gray-500 uppercase">Columns</p>
+                            <p class="text-2xl font-bold" id="stat-cols">-</p>
+                        </div>
+                        <div class="bg-white p-4 rounded-lg shadow border-l-4 border-red-500">
+                            <p class="text-xs text-gray-500 uppercase">Issues Detected</p>
+                            <p class="text-2xl font-bold" id="stat-issues">-</p>
+                        </div>
+                         <!-- AI Insights Panel -->
+                        <div class="sm:col-span-3 bg-gradient-to-r from-indigo-600 to-blue-600 rounded-lg p-6 shadow-lg text-white">
+                            <div class="flex items-start gap-4">
+                                <div class="bg-white/20 p-3 rounded-full">
+                                    <i class="fa-solid fa-robot text-2xl"></i>
+                                </div>
+                                <div class="flex-1">
+                                    <h3 class="font-bold text-lg mb-1">AI Data Insight</h3>
+                                    <p id="ai-insight-text" class="text-blue-100 text-sm leading-relaxed mb-4">
+                                        Analyzing your data structure...
+                                    </p>
+                                    <div id="ai-actions" class="hidden">
+                                        <button type="button" onclick="applyAiPlan()" class="bg-white text-blue-600 px-4 py-2 rounded font-bold text-sm shadow hover:bg-gray-100 transition">
+                                            <i class="fa-solid fa-wand-magic-sparkles mr-2"></i> Apply Recommended Plan
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
                         </div>
+                    </div>
+
+                    <!-- Chart Column -->
+                    <div class="bg-white p-4 rounded-lg shadow flex flex-col items-center justify-center relative">
+                        <h3 class="text-sm font-bold text-gray-500 uppercase mb-2">Data Health Score</h3>
+                        <div class="relative w-48 h-48">
+                            <canvas id="healthChart"></canvas>
+                        </div>
+                        <p class="text-xs text-gray-400 mt-2 text-center">Hover for details</p>
                     </div>
                 </div>
 
@@ -167,6 +179,7 @@
         let sessionData = null;
         let sessionId = null;
         let currentAiPlan = [];
+        let healthChart = null;
 
         // --- Drag & Drop ---
         const dropZone = document.getElementById('drop-zone');
@@ -226,6 +239,8 @@
             document.getElementById('stat-cols').innerText = sessionData.total_columns;
             document.getElementById('stat-issues').innerText = sessionData.issues.length;
 
+            renderHealthChart();
+
             const container = document.getElementById('issues-container');
             container.innerHTML = '';
 
@@ -262,6 +277,77 @@
                 `;
                 container.appendChild(card);
             });
+        }
+
+        function renderHealthChart() {
+            const ctx = document.getElementById('healthChart').getContext('2d');
+
+            // Calculate aggregated issue data
+            let issueCounts = {};
+            let totalAffectedRows = 0; // Approximate (duplicates might overlap)
+
+            sessionData.issues.forEach(issue => {
+                if (!issueCounts[issue.type]) {
+                    issueCounts[issue.type] = 0;
+                }
+                issueCounts[issue.type] += issue.row_count;
+                totalAffectedRows += issue.row_count;
+            });
+
+            // "Clean" rows is total - affected (simplified logic, assuming no overlap for visual)
+            // Ideally backend gives us exact 'clean rows', but this approximation works for UX
+            let cleanRows = Math.max(0, sessionData.total_rows - totalAffectedRows);
+
+            // If rows < affected (due to multiple issues per row), clamp clean to 0
+            if (totalAffectedRows > sessionData.total_rows) {
+                cleanRows = 0;
+                // Normalize for the pie chart so it doesn't look weird
+            }
+
+            const data = {
+                labels: ['Clean Data', ...Object.keys(issueCounts)],
+                datasets: [{
+                    data: [cleanRows, ...Object.values(issueCounts)],
+                    backgroundColor: [
+                        '#10B981', // Green for clean
+                        '#F59E0B', // Yellow
+                        '#EF4444', // Red
+                        '#3B82F6', // Blue
+                        '#8B5CF6', // Purple
+                        '#EC4899'  // Pink
+                    ],
+                    borderWidth: 0,
+                    hoverOffset: 4
+                }]
+            };
+
+            const config = {
+                type: 'doughnut',
+                data: data,
+                options: {
+                    responsive: true,
+                    cutout: '70%',
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.label || '';
+                                    let value = context.raw || 0;
+                                    let total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                    let percentage = ((value / total) * 100).toFixed(1) + '%';
+                                    return `${label}: ${value} rows (${percentage})`;
+                                }
+                            }
+                        }
+                    }
+                }
+            };
+
+            if (healthChart) {
+                healthChart.destroy();
+            }
+            healthChart = new Chart(ctx, config);
         }
 
         function getSeverityColor(sev) {
