@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Explain-Clean AI</title>
+    <title>Explain-Clean Tool</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
@@ -31,7 +31,7 @@
         <div class="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
             <div class="flex items-center gap-2">
                 <i class="fa-solid fa-wand-magic-sparkles text-blue-600 text-xl"></i>
-                <h1 class="text-xl font-bold text-gray-900">Explain-Clean AI</h1>
+                <h1 class="text-xl font-bold text-gray-900">Explain-Clean Tool</h1>
             </div>
             <div id="status-bar" class="hidden text-sm text-gray-500 font-medium bg-green-100 text-green-700 px-3 py-1 rounded-full fade-in">
                 Session Active
@@ -81,12 +81,12 @@
                             <p class="text-3xl font-bold text-gray-800" id="stat-issues">-</p>
                         </div>
 
-                        <!-- AI Insight Box -->
+                        <!-- Insight Box -->
                         <div class="sm:col-span-3 bg-gradient-to-br from-indigo-600 to-blue-600 rounded-lg p-6 shadow-lg text-white transform transition duration-500">
                             <div class="flex items-start gap-4">
                                 <div class="bg-white/20 p-3 rounded-full shadow-inner"><i class="fa-solid fa-robot text-2xl"></i></div>
                                 <div class="flex-1">
-                                    <h3 class="font-bold text-lg mb-1">AI Data Insight</h3>
+                                    <h3 class="font-bold text-lg mb-1">Data Insight</h3>
                                     <p id="ai-insight-text" class="text-blue-50 text-sm leading-relaxed mb-4 opacity-90 font-light">Analyzing...</p>
                                     <div id="ai-actions" class="hidden">
                                         <button type="button" onclick="applyAiPlan()" class="bg-white text-blue-600 px-5 py-2 rounded-lg font-bold text-sm shadow hover:bg-blue-50 hover:shadow-lg transition transform hover:-translate-y-0.5">
@@ -154,7 +154,7 @@
             <div class="flex justify-between items-center mb-6 border-b pb-4">
                 <div>
                     <h3 class="text-2xl font-bold text-gray-800">Optimization Plan</h3>
-                    <p class="text-sm text-gray-500 mt-1">Reviewing AI proposed changes</p>
+                    <p class="text-sm text-gray-500 mt-1">Reviewing proposed changes</p>
                 </div>
                 <button onclick="closeModal()" class="text-gray-400 hover:text-gray-600 transition bg-gray-100 hover:bg-gray-200 rounded-full w-8 h-8 flex items-center justify-center">
                     <i class="fa-solid fa-times"></i>
