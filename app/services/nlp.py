@@ -1,4 +1,4 @@
-from typing import List, Tuple
+from typing import List, Tuple, Dict, Any
 from app.models import DetectedIssue
 
 
@@ -15,7 +15,6 @@ class NLPService:
         if "high" in command or "critical" in command or "severe" in command:
             for issue in issues:
                 if issue.severity == "High":
-                    # Determine best default strategy
                     strategy = NLPService._get_default_strategy(issue)
                     if strategy:
                         actions.append((issue.id, strategy))
@@ -45,29 +44,28 @@ class NLPService:
         return actions
 
     @staticmethod
-    def generate_insight(issues: List[DetectedIssue]) -> dict:
+    def generate_insight(issues: List[DetectedIssue]) -> Dict[str, Any]:
         """
         Generates a proactive insight summary and a recommended action plan.
         """
         high_sev = [i for i in issues if i.severity == "High"]
-        med_sev = [i for i in issues if i.severity == "Medium"]
 
         insight_text = ""
         actions = []
 
-        # 1. Generate Narrative
+        # 1. Generate Narrative (The "Why")
         if not issues:
-            insight_text = "The dataset appears to be clean. No major issues detected."
+            insight_text = "Great news! The dataset appears to be clean. No major issues were detected."
         else:
-            insight_text = f"I've detected {len(issues)} issues in your data. "
+            insight_text = f"I have analyzed your data and found {len(issues)} quality issues. "
 
             if high_sev:
-                insight_text += f"Most critically, there are {len(high_sev)} high-severity issues (like {high_sev[0].type}) that will break downstream analysis. "
+                insight_text += f"Most critically, there are {len(high_sev)} high-severity issues (like {high_sev[0].type}) that will break downstream analysis or cause calculations to fail. "
 
             if any(i.type == "Visualization Risk" for i in issues):
-                insight_text += "There are also high-cardinality columns that will make charts unreadable. "
+                insight_text += "I also noticed high-cardinality columns that will make your charts unreadable. "
 
-            insight_text += "I recommend standardizing these values to ensure accurate aggregation."
+            insight_text += "I have prepared a cleaning plan to fix these problems automatically."
 
         # 2. Generate Auto-Fix Plan (Heuristic based)
         for issue in issues:
@@ -88,10 +86,9 @@ class NLPService:
             return "remove_duplicates"
 
         if issue.type == "Missing Values":
-            # If few rows, drop. If many, fill.
-            if issue.row_count / 1000 < 0.05:  # Arbitrary threshold for context
+            if issue.row_count / 1000 < 0.05:
                 return "drop_rows"
-            if "Numeric" in str(issue.description):  # Simplified check
+            if "Numeric" in str(issue.description):
                 return "fill_median"
             return "fill_mode"
 

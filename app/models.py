@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import List, Optional, Dict, Any, Union
+from typing import List, Optional, Dict, Any
 from enum import Enum
 
 class Severity(str, Enum):
@@ -18,7 +18,7 @@ class IssueType(str, Enum):
 class ResolutionStrategy(BaseModel):
     name: str
     description: str
-    action_code: str  # Code used by the cleaner service
+    action_code: str
 
 class DetectedIssue(BaseModel):
     id: str
@@ -37,7 +37,7 @@ class DatasetProfile(BaseModel):
     columns: List[str]
     issues: List[DetectedIssue]
     sample_data: List[Dict[str, Any]]
-    session_id: str
+    session_id: str  # <--- CRITICAL FIELD
 
 class FixRequest(BaseModel):
     issue_id: str
