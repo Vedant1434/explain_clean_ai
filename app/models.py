@@ -11,8 +11,8 @@ class IssueType(str, Enum):
     MISSING_VALUES = "Missing Values"
     DUPLICATES = "Duplicates"
     OUTLIERS = "Outliers"
-    INCONSISTENT_TYPE = "Inconsistent Type" # e.g. Numbers as Strings
-    TEXT_INCONSISTENCY = "Text Inconsistency" # e.g. "north" vs "North"
+    INCONSISTENT_TYPE = "Inconsistent Type" # Numbers as Text
+    TEXT_INCONSISTENCY = "Text Inconsistency" # "north" vs "North"
     VISUALIZATION_RISK = "Visualization Risk"
 
 class ResolutionStrategy(BaseModel):
@@ -53,5 +53,6 @@ class CleaningReport(BaseModel):
     rows_before: int
     rows_after: int
     actions_taken: List[str]
+    remaining_issues: List[DetectedIssue]
     chart_recommendations: List[str]
     download_url: str

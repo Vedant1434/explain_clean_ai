@@ -22,7 +22,7 @@ class CleanerService:
 
             col = issue.column
 
-            # --- Missing Values ---
+            # Missing Values
             if code == "drop_rows":
                 if col:
                     df_clean = df_clean.dropna(subset=[col])
@@ -46,13 +46,13 @@ class CleanerService:
                 df_clean[col] = df_clean[col].ffill()
                 audit_log.append(f"Forward-filled missing values in '{col}'")
 
-            # --- Duplicates ---
+            # Duplicates
             elif code == "remove_duplicates":
                 before = len(df_clean)
                 df_clean = df_clean.drop_duplicates()
                 audit_log.append(f"Removed {before - len(df_clean)} duplicate rows")
 
-            # --- Outliers ---
+            # Outliers
             elif code == "clip_outliers":
                 Q1 = df_clean[col].quantile(0.25)
                 Q3 = df_clean[col].quantile(0.75)
@@ -69,10 +69,8 @@ class CleanerService:
                 df_clean = df_clean[mask]
                 audit_log.append(f"Dropped outlier rows in '{col}'")
 
-            # --- Text & Type Inconsistencies ---
+            # Type & Text Issues
             elif code == "convert_numeric":
-                # Coerce to numeric, setting errors (text) to NaN, then we might need to fill those NaNs later
-                # For this step, we just convert.
                 df_clean[col] = pd.to_numeric(df_clean[col], errors='coerce')
                 audit_log.append(f"Converted '{col}' to Numeric (invalid values set to NaN)")
 
@@ -84,7 +82,7 @@ class CleanerService:
                 df_clean[col] = df_clean[col].astype(str).str.lower()
                 audit_log.append(f"Standardized '{col}' to Lower Case")
 
-            # --- Viz Risks ---
+            # Viz Risks
             elif code == "group_rare":
                 top_10 = df_clean[col].value_counts().nlargest(10).index
                 df_clean[col] = df_clean[col].apply(lambda x: x if x in top_10 else "Other")
@@ -95,7 +93,6 @@ class CleanerService:
     @staticmethod
     def recommend_charts(df: pd.DataFrame) -> list[str]:
         recommendations = []
-
         num_cols = df.select_dtypes(include=[np.number]).columns.tolist()
         cat_cols = df.select_dtypes(include=['object', 'category']).columns.tolist()
         date_cols = df.select_dtypes(include=['datetime']).columns.tolist()
@@ -103,15 +100,10 @@ class CleanerService:
         if len(num_cols) >= 2:
             recommendations.append(f"Scatter Plot: {num_cols[0]} vs {num_cols[1]}")
             recommendations.append(f"Correlation Heatmap: {', '.join(num_cols[:3])}")
-
         if len(cat_cols) > 0 and len(num_cols) > 0:
             recommendations.append(f"Bar Chart: {cat_cols[0]} vs {num_cols[0]} (Avg)")
-            recommendations.append(f"Box Plot: {cat_cols[0]} distribution of {num_cols[0]}")
-
         if len(date_cols) > 0 and len(num_cols) > 0:
             recommendations.append(f"Line Chart (Trend): {num_cols[0]} over Time")
-
         if not recommendations:
             recommendations.append("Data table view (Insufficient columns for advanced charts)")
-
         return recommendations

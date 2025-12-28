@@ -32,17 +32,11 @@ async def root():
 
 @app.post("/api/upload", response_model=DatasetProfile)
 async def upload_dataset(file: UploadFile = File(...)):
-    # 1. Ingest
     df = await IngestionService.process_upload(file)
-
-    # 2. Create Session
     session_id = store.create_session(df, file.filename)
-
-    # 3. Profile
     issues = ProfilerService.analyze(df)
     store.save_issues(session_id, issues)
 
-    # 4. Return Profile with Session ID (Fixes Validation Error)
     return DatasetProfile(
         filename=file.filename,
         total_rows=len(df),
@@ -50,45 +44,17 @@ async def upload_dataset(file: UploadFile = File(...)):
         columns=df.columns.tolist(),
         issues=issues,
         sample_data=IngestionService.get_preview(df),
-        session_id=session_id  # <--- CRITICAL FIX
+        session_id=session_id
     )
 
 
 @app.get("/api/session/{session_id}/analyze")
 async def analyze_session(session_id: str):
-    """
-    New endpoint for Proactive AI Insights
-    """
     session = store.get_session(session_id)
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
-
     issues_list = list(session["issues"].values())
-
-    # Generate proactive insights
-    analysis = NLPService.generate_insight(issues_list)
-
-    return analysis
-
-
-@app.post("/api/session/{session_id}/query")
-async def nlp_query(session_id: str, query: NaturalLanguageQuery):
-    session = store.get_session(session_id)
-    if not session:
-        raise HTTPException(status_code=404, detail="Session not found")
-
-    issues_dict = session["issues"]
-    issues_list = list(issues_dict.values())
-
-    suggested_actions = NLPService.interpret_command(query.query, issues_list)
-
-    return {
-        "applied_to": [
-            {"issue_id": sid, "strategy_code": code}
-            for sid, code in suggested_actions
-        ],
-        "message": f"Found {len(suggested_actions)} actions for your request."
-    }
+    return NLPService.generate_insight(issues_list)
 
 
 @app.post("/api/session/{session_id}/clean", response_model=CleaningReport)
@@ -97,27 +63,33 @@ async def clean_dataset(session_id: str, request: BulkFixRequest):
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
 
+    # 1. Apply Fixes
     original_df = session["current_df"]
-
     cleaned_df, actions = CleanerService.apply_fixes(
         original_df, request.fixes, session["issues"]
     )
 
+    # 2. Update Session
     store.update_dataframe(session_id, cleaned_df)
     for action in actions:
         store.log_action(session_id, action)
 
+    # 3. RE-PROFILE (Iterative Logic)
+    # Scan the now cleaned data for any remaining or new issues
+    remaining_issues = ProfilerService.analyze(cleaned_df)
+    store.save_issues(session_id, remaining_issues)
+
+    # 4. Save to Disk (Always save latest version)
     output_filename = f"clean_{session['filename']}"
     output_path = os.path.join("temp", output_filename)
     cleaned_df.to_csv(output_path, index=False)
-
-    recs = CleanerService.recommend_charts(cleaned_df)
 
     return CleaningReport(
         rows_before=len(original_df),
         rows_after=len(cleaned_df),
         actions_taken=actions,
-        chart_recommendations=recs,
+        remaining_issues=remaining_issues,  # Pass back to frontend
+        chart_recommendations=CleanerService.recommend_charts(cleaned_df),
         download_url=f"/api/download/{output_filename}"
     )
 

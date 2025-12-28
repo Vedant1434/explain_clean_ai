@@ -8,19 +8,17 @@ class NLPService:
         command = command.lower()
         actions = []
 
-        if "high" in command or "critical" in command or "severe" in command:
+        if "high" in command or "critical" in command:
             for issue in issues:
                 if issue.severity == "High":
                     strategy = NLPService._get_default_strategy(issue)
-                    if strategy:
-                        actions.append((issue.id, strategy))
+                    if strategy: actions.append((issue.id, strategy))
 
-        elif "missing" in command or "null" in command or "empty" in command:
+        elif "missing" in command:
             for issue in issues:
                 if issue.type == IssueType.MISSING_VALUES:
                     strategy = NLPService._get_default_strategy(issue)
-                    if strategy:
-                        actions.append((issue.id, strategy))
+                    if strategy: actions.append((issue.id, strategy))
 
         elif "text" in command or "case" in command:
             for issue in issues:
@@ -35,15 +33,13 @@ class NLPService:
         elif "all" in command or "everything" in command:
             for issue in issues:
                 strategy = NLPService._get_default_strategy(issue)
-                if strategy:
-                    actions.append((issue.id, strategy))
+                if strategy: actions.append((issue.id, strategy))
 
         return actions
 
     @staticmethod
     def generate_insight(issues: List[DetectedIssue]) -> Dict[str, Any]:
         high_sev = [i for i in issues if i.severity == "High"]
-
         insight_text = ""
         actions = []
 
@@ -51,7 +47,6 @@ class NLPService:
             insight_text = "Great news! The dataset appears to be clean. No major issues were detected."
         else:
             insight_text = f"I have analyzed your data and found {len(issues)} quality issues. "
-
             if high_sev:
                 insight_text += f"Most critically, there are {len(high_sev)} high-severity issues. "
                 if any(i.type == IssueType.INCONSISTENT_TYPE for i in high_sev):
@@ -74,35 +69,19 @@ class NLPService:
 
     @staticmethod
     def _get_default_strategy(issue: DetectedIssue) -> str:
-        """
-        Smart Heuristics for Default Actions.
-        This is the 'Brain' of the AI recommendation system.
-        """
         if issue.type == IssueType.DUPLICATES:
             return "remove_duplicates"
-
         if issue.type == IssueType.MISSING_VALUES:
-            # If it's a very small amount of missing data, dropping is safest.
-            if issue.row_count < 20 or issue.row_count / 1000 < 0.05:
-                return "drop_rows"
-            # If the column name suggests a sequence (like time), use ffill
-            if issue.column and ("date" in issue.column.lower() or "time" in issue.column.lower()):
-                return "ffill"
-            if "Numeric" in str(issue.description):
-                return "fill_median"  # Median is safer than mean for un-reviewed data
+            if issue.row_count < 20 or issue.row_count / 1000 < 0.05: return "drop_rows"
+            if issue.column and ("date" in issue.column.lower() or "time" in issue.column.lower()): return "ffill"
+            if "Numeric" in str(issue.description): return "fill_median"
             return "fill_mode"
-
         if issue.type == IssueType.OUTLIERS:
-            # We already skipped IDs in the profiler, so clipping is generally safe for measurements
             return "clip_outliers"
-
         if issue.type == IssueType.VISUALIZATION_RISK:
             return "group_rare"
-
         if issue.type == IssueType.INCONSISTENT_TYPE:
             return "convert_numeric"
-
         if issue.type == IssueType.TEXT_INCONSISTENCY:
-            return "title_case"  # Safest default for names/categories
-
+            return "title_case"
         return "ignore"

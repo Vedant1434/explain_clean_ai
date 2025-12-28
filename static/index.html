@@ -5,90 +5,92 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Explain-Clean AI</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script> <!-- Added Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
         .drag-active { border-color: #3b82f6; background-color: #eff6ff; }
         .spinner { border-top-color: transparent; -webkit-animation: spinner 1.5s linear infinite; animation: spinner 1.5s linear infinite; }
         @keyframes spinner { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        /* Custom scrollbar for modal */
+
+        /* Animations */
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+        .fade-in { animation: fadeIn 0.5s ease-out; }
+        .slide-up { animation: slideUp 0.5s ease-out forwards; }
+
+        /* Custom scrollbar */
         .custom-scrollbar::-webkit-scrollbar { width: 6px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 4px; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 4px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #9ca3af; }
     </style>
 </head>
 <body class="bg-gray-50 text-gray-800 font-sans h-screen flex flex-col">
 
-    <!-- Header -->
     <header class="bg-white shadow-sm z-10">
         <div class="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
             <div class="flex items-center gap-2">
                 <i class="fa-solid fa-wand-magic-sparkles text-blue-600 text-xl"></i>
                 <h1 class="text-xl font-bold text-gray-900">Explain-Clean AI</h1>
             </div>
-            <div id="status-bar" class="hidden text-sm text-gray-500">
+            <div id="status-bar" class="hidden text-sm text-gray-500 font-medium bg-green-100 text-green-700 px-3 py-1 rounded-full fade-in">
                 Session Active
             </div>
         </div>
     </header>
 
-    <!-- Main Content -->
     <main class="flex-1 overflow-y-auto p-6">
         <div class="max-w-5xl mx-auto space-y-8">
 
-            <!-- Step 1: Upload -->
-            <section id="upload-section" class="bg-white rounded-xl shadow-lg p-10 text-center transition-all">
-                <div id="drop-zone" class="border-4 border-dashed border-gray-200 rounded-lg p-12 cursor-pointer hover:border-blue-400 transition">
-                    <i class="fa-solid fa-cloud-arrow-up text-6xl text-gray-300 mb-4"></i>
+            <!-- Upload Section -->
+            <section id="upload-section" class="bg-white rounded-xl shadow-lg p-10 text-center transition-all duration-500 slide-up">
+                <div id="drop-zone" class="border-4 border-dashed border-gray-200 rounded-lg p-12 cursor-pointer hover:border-blue-400 transition hover:bg-gray-50">
+                    <i class="fa-solid fa-cloud-arrow-up text-6xl text-gray-300 mb-4 transition transform hover:scale-110"></i>
                     <h2 class="text-2xl font-semibold mb-2">Upload your Dataset</h2>
                     <p class="text-gray-500 mb-6">Drag & drop CSV files here, or click to browse</p>
                     <input type="file" id="file-input" class="hidden" accept=".csv">
-                    <button type="button" onclick="document.getElementById('file-input').click()" class="bg-blue-600 text-white px-6 py-2 rounded-lg font-medium hover:bg-blue-700 transition">
+                    <button type="button" onclick="document.getElementById('file-input').click()" class="bg-blue-600 text-white px-6 py-2 rounded-lg font-medium hover:bg-blue-700 transition shadow-md">
                         Select File
                     </button>
                 </div>
             </section>
 
-            <!-- Loading Spinner -->
-            <div id="loader" class="hidden flex flex-col items-center justify-center py-12">
+            <!-- Loader -->
+            <div id="loader" class="hidden flex flex-col items-center justify-center py-12 fade-in">
                 <div class="spinner w-12 h-12 border-4 border-blue-600 rounded-full mb-4"></div>
-                <p class="text-gray-600 animate-pulse">Analyzing data profile...</p>
+                <p class="text-gray-600 animate-pulse font-medium">Analyzing data profile...</p>
             </div>
 
-            <!-- Step 2: Dashboard (Initially Hidden) -->
-            <section id="dashboard-section" class="hidden space-y-6">
+            <!-- Dashboard -->
+            <section id="dashboard-section" class="hidden space-y-6 fade-in">
 
-                <!-- Top Row: Stats & Health Chart -->
+                <!-- Stats & Chart Row -->
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <!-- Stats Column -->
                     <div class="md:col-span-2 grid grid-cols-1 sm:grid-cols-3 gap-4">
-                        <div class="bg-white p-4 rounded-lg shadow border-l-4 border-blue-500">
-                            <p class="text-xs text-gray-500 uppercase">Rows</p>
-                            <p class="text-2xl font-bold" id="stat-rows">-</p>
+                        <div class="bg-white p-4 rounded-lg shadow-md border-l-4 border-blue-500 transform transition hover:-translate-y-1">
+                            <p class="text-xs text-gray-500 uppercase font-bold tracking-wide">Rows</p>
+                            <p class="text-3xl font-bold text-gray-800" id="stat-rows">-</p>
                         </div>
-                        <div class="bg-white p-4 rounded-lg shadow border-l-4 border-purple-500">
-                            <p class="text-xs text-gray-500 uppercase">Columns</p>
-                            <p class="text-2xl font-bold" id="stat-cols">-</p>
+                        <div class="bg-white p-4 rounded-lg shadow-md border-l-4 border-purple-500 transform transition hover:-translate-y-1">
+                            <p class="text-xs text-gray-500 uppercase font-bold tracking-wide">Columns</p>
+                            <p class="text-3xl font-bold text-gray-800" id="stat-cols">-</p>
                         </div>
-                        <div class="bg-white p-4 rounded-lg shadow border-l-4 border-red-500">
-                            <p class="text-xs text-gray-500 uppercase">Issues Detected</p>
-                            <p class="text-2xl font-bold" id="stat-issues">-</p>
+                        <div class="bg-white p-4 rounded-lg shadow-md border-l-4 border-red-500 transform transition hover:-translate-y-1">
+                            <p class="text-xs text-gray-500 uppercase font-bold tracking-wide">Issues Detected</p>
+                            <p class="text-3xl font-bold text-gray-800" id="stat-issues">-</p>
                         </div>
-                         <!-- AI Insights Panel -->
-                        <div class="sm:col-span-3 bg-gradient-to-r from-indigo-600 to-blue-600 rounded-lg p-6 shadow-lg text-white">
+
+                        <!-- AI Insight Box -->
+                        <div class="sm:col-span-3 bg-gradient-to-br from-indigo-600 to-blue-600 rounded-lg p-6 shadow-lg text-white transform transition duration-500">
                             <div class="flex items-start gap-4">
-                                <div class="bg-white/20 p-3 rounded-full">
-                                    <i class="fa-solid fa-robot text-2xl"></i>
-                                </div>
+                                <div class="bg-white/20 p-3 rounded-full shadow-inner"><i class="fa-solid fa-robot text-2xl"></i></div>
                                 <div class="flex-1">
                                     <h3 class="font-bold text-lg mb-1">AI Data Insight</h3>
-                                    <p id="ai-insight-text" class="text-blue-100 text-sm leading-relaxed mb-4">
-                                        Analyzing your data structure...
-                                    </p>
+                                    <p id="ai-insight-text" class="text-blue-50 text-sm leading-relaxed mb-4 opacity-90 font-light">Analyzing...</p>
                                     <div id="ai-actions" class="hidden">
-                                        <button type="button" onclick="applyAiPlan()" class="bg-white text-blue-600 px-4 py-2 rounded font-bold text-sm shadow hover:bg-gray-100 transition">
-                                            <i class="fa-solid fa-wand-magic-sparkles mr-2"></i> Apply Recommended Plan
+                                        <button type="button" onclick="applyAiPlan()" class="bg-white text-blue-600 px-5 py-2 rounded-lg font-bold text-sm shadow hover:bg-blue-50 hover:shadow-lg transition transform hover:-translate-y-0.5">
+                                            <i class="fa-solid fa-wand-magic-sparkles mr-2"></i> Review Recommended Plan
                                         </button>
                                     </div>
                                 </div>
@@ -97,136 +99,121 @@
                     </div>
 
                     <!-- Chart Column -->
-                    <div class="bg-white p-4 rounded-lg shadow flex flex-col items-center justify-center relative">
-                        <h3 class="text-sm font-bold text-gray-500 uppercase mb-2">Data Health Score</h3>
-                        <div class="relative w-48 h-48">
+                    <div class="bg-white p-5 rounded-lg shadow-md flex flex-col items-center justify-center relative">
+                        <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">Data Health Score</h3>
+                        <div class="relative w-full h-48">
                             <canvas id="healthChart"></canvas>
                         </div>
-                        <p class="text-xs text-gray-400 mt-2 text-center">Hover for details</p>
                     </div>
                 </div>
 
                 <!-- Issues List -->
-                <div id="issues-container" class="space-y-4">
-                    <!-- Dynamic Issue Cards will appear here -->
-                </div>
+                <div id="issues-container" class="space-y-4"></div>
 
-                <!-- Actions -->
-                <div class="flex justify-end pt-4">
-                    <button type="button" onclick="applyFixes()" class="bg-green-600 text-white px-8 py-3 rounded-lg font-bold shadow-lg hover:bg-green-700 transition transform hover:-translate-y-1">
-                        Apply Selected Fixes & Clean
+                <!-- Footer Action -->
+                <div class="sticky bottom-4 z-20 flex justify-end">
+                    <button type="button" onclick="applyFixes()" class="bg-green-600 text-white px-8 py-4 rounded-xl font-bold shadow-xl hover:bg-green-700 transition transform hover:-translate-y-1 flex items-center gap-2">
+                        <span>Apply Fixes & Re-Analyze</span>
+                        <i class="fa-solid fa-arrow-right"></i>
                     </button>
                 </div>
             </section>
 
-            <!-- Step 3: Report (Initially Hidden) -->
-            <section id="report-section" class="hidden bg-white rounded-xl shadow-lg p-8">
-                <div class="text-center mb-8">
-                    <div class="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <i class="fa-solid fa-check text-3xl"></i>
+            <!-- Final Report -->
+            <section id="report-section" class="hidden bg-white rounded-xl shadow-lg p-12 fade-in">
+                <div class="text-center mb-10">
+                    <div class="w-20 h-20 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm animate-bounce">
+                        <i class="fa-solid fa-check text-4xl"></i>
                     </div>
-                    <h2 class="text-3xl font-bold text-gray-800">Cleaning Complete!</h2>
-                    <p class="text-gray-600">Your dataset is ready for analysis.</p>
+                    <h2 class="text-4xl font-bold text-gray-800 mb-2">Cleaning Complete!</h2>
+                    <p class="text-gray-500 text-lg">Your dataset is now spotless and ready for analysis.</p>
                 </div>
-
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-10">
                     <div>
-                        <h3 class="font-bold text-lg mb-4 border-b pb-2">Audit Log</h3>
-                        <ul id="audit-log" class="text-sm text-gray-600 space-y-2 max-h-60 overflow-y-auto"></ul>
+                        <h3 class="font-bold text-xl text-gray-800 mb-4 border-b pb-2">Session Audit Log</h3>
+                        <ul id="audit-log" class="text-sm text-gray-600 space-y-3 max-h-80 overflow-y-auto custom-scrollbar pr-2"></ul>
                     </div>
                     <div>
-                        <h3 class="font-bold text-lg mb-4 border-b pb-2">Recommended Charts</h3>
-                        <div id="chart-recs" class="flex flex-wrap gap-2"></div>
+                        <h3 class="font-bold text-xl text-gray-800 mb-4 border-b pb-2">Visualization Ready</h3>
+                        <div id="chart-recs" class="flex flex-wrap gap-3"></div>
                     </div>
                 </div>
-
-                <div class="mt-8 text-center">
-                    <a id="download-btn" href="#" class="inline-block bg-blue-600 text-white px-8 py-3 rounded-lg font-bold shadow hover:bg-blue-700 transition">
-                        <i class="fa-solid fa-download mr-2"></i> Download Clean CSV
+                <div class="mt-12 text-center flex justify-center gap-4">
+                    <a id="download-btn" href="#" class="bg-blue-600 text-white px-8 py-3 rounded-lg font-bold shadow-lg hover:bg-blue-700 transition transform hover:-translate-y-1 flex items-center gap-2">
+                        <i class="fa-solid fa-download"></i> Download Final CSV
                     </a>
-                    <button type="button" onclick="location.reload()" class="ml-4 text-gray-500 hover:text-gray-700 underline">Start Over</button>
+                    <button type="button" onclick="location.reload()" class="bg-gray-100 text-gray-600 px-8 py-3 rounded-lg font-bold hover:bg-gray-200 transition">Start New Session</button>
                 </div>
             </section>
-
         </div>
     </main>
 
-    <!-- AI Plan Details Modal -->
-    <div id="plan-details-modal" class="fixed inset-0 bg-gray-900 bg-opacity-50 hidden flex items-center justify-center z-50 transition-opacity opacity-0" style="transition: opacity 0.3s;">
-        <div class="bg-white rounded-xl shadow-2xl max-w-lg w-full p-6 m-4 transform scale-95 transition-transform" style="transition: transform 0.3s;" id="modal-panel">
-            <div class="flex justify-between items-center mb-4 border-b pb-3">
-                <h3 class="text-xl font-bold text-gray-800 flex items-center">
-                    <i class="fa-solid fa-wand-magic-sparkles text-blue-600 mr-2"></i>
-                    AI Optimization Plan
-                </h3>
-                <button onclick="closeModal()" class="text-gray-400 hover:text-gray-600 focus:outline-none">
-                    <i class="fa-solid fa-times text-xl"></i>
+    <!-- Detailed Plan Modal -->
+    <div id="plan-details-modal" class="fixed inset-0 bg-gray-900 bg-opacity-60 backdrop-blur-sm hidden flex items-center justify-center z-50 transition-opacity duration-300">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-8 m-4 transform scale-95 transition-transform duration-300" id="modal-panel">
+            <div class="flex justify-between items-center mb-6 border-b pb-4">
+                <div>
+                    <h3 class="text-2xl font-bold text-gray-800">Optimization Plan</h3>
+                    <p class="text-sm text-gray-500 mt-1">Reviewing AI proposed changes</p>
+                </div>
+                <button onclick="closeModal()" class="text-gray-400 hover:text-gray-600 transition bg-gray-100 hover:bg-gray-200 rounded-full w-8 h-8 flex items-center justify-center">
+                    <i class="fa-solid fa-times"></i>
                 </button>
             </div>
-            <div class="space-y-3 max-h-[60vh] overflow-y-auto pr-2 custom-scrollbar" id="plan-details-content">
+            <div class="space-y-3 max-h-[50vh] overflow-y-auto custom-scrollbar pr-2" id="plan-details-content">
                 <!-- Dynamic Content -->
             </div>
-            <div class="mt-6 flex justify-end">
-                <button onclick="closeModal()" class="bg-blue-600 text-white px-6 py-2 rounded-lg font-medium hover:bg-blue-700 transition shadow-md">
-                    Got it
+            <div class="mt-8 flex justify-end gap-3">
+                <button onclick="closeModal()" class="px-5 py-2 text-gray-600 font-medium hover:bg-gray-50 rounded-lg transition">Cancel</button>
+                <button onclick="closeModal()" class="bg-blue-600 text-white px-6 py-2 rounded-lg font-bold hover:bg-blue-700 transition shadow-md">
+                    Confirm & Close
                 </button>
             </div>
         </div>
     </div>
 
+    <!-- Toast Notification -->
+    <div id="toast" class="fixed bottom-6 right-6 bg-gray-800 text-white px-6 py-4 rounded-lg shadow-2xl transform translate-y-32 transition-transform duration-500 z-50 flex items-center gap-3">
+        <i class="fa-solid fa-info-circle text-blue-400"></i>
+        <span id="toast-msg" class="font-medium">Notification</span>
+    </div>
+
     <script>
-        // State
         let sessionData = null;
         let sessionId = null;
         let currentAiPlan = [];
         let healthChart = null;
+        let fullAuditLog = [];
 
-        // --- Drag & Drop ---
         const dropZone = document.getElementById('drop-zone');
         const fileInput = document.getElementById('file-input');
 
         ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-            dropZone.addEventListener(eventName, preventDefaults, false);
+            dropZone.addEventListener(eventName, e => { e.preventDefault(); e.stopPropagation(); });
         });
-
-        function preventDefaults(e) { e.preventDefault(); e.stopPropagation(); }
-        ['dragenter', 'dragover'].forEach(name => dropZone.addEventListener(name, () => dropZone.classList.add('drag-active')));
-        ['dragleave', 'drop'].forEach(name => dropZone.addEventListener(name, () => dropZone.classList.remove('drag-active')));
-
-        dropZone.addEventListener('drop', handleDrop, false);
-        fileInput.addEventListener('change', (e) => handleFiles(e.target.files));
-
-        function handleDrop(e) { handleFiles(e.dataTransfer.files); }
+        dropZone.addEventListener('drop', e => handleFiles(e.dataTransfer.files));
+        fileInput.addEventListener('change', e => handleFiles(e.target.files));
 
         function handleFiles(files) {
             if (files.length > 0) uploadFile(files[0]);
         }
 
-        // --- API Interactions ---
-
         async function uploadFile(file) {
             document.getElementById('upload-section').classList.add('hidden');
             document.getElementById('loader').classList.remove('hidden');
-
             const formData = new FormData();
             formData.append('file', file);
 
             try {
                 const response = await fetch('/api/upload', { method: 'POST', body: formData });
-
-                if (!response.ok) {
-                    throw new Error(`Server Error: ${response.statusText}`);
-                }
-
+                if(!response.ok) throw new Error("Upload failed");
                 sessionData = await response.json();
                 sessionId = sessionData.session_id;
-
+                document.getElementById('status-bar').classList.remove('hidden');
                 renderDashboard();
                 await fetchAiInsights();
-
             } catch (error) {
-                console.error(error);
-                alert("Error uploading file. Please check backend logs.");
+                alert("Upload failed. Please check backend logs.");
                 location.reload();
             }
         }
@@ -235,7 +222,7 @@
             document.getElementById('loader').classList.add('hidden');
             document.getElementById('dashboard-section').classList.remove('hidden');
 
-            document.getElementById('stat-rows').innerText = sessionData.total_rows;
+            document.getElementById('stat-rows').innerText = sessionData.total_rows.toLocaleString();
             document.getElementById('stat-cols').innerText = sessionData.total_columns;
             document.getElementById('stat-issues').innerText = sessionData.issues.length;
 
@@ -244,12 +231,16 @@
             const container = document.getElementById('issues-container');
             container.innerHTML = '';
 
-            sessionData.issues.forEach(issue => {
+            if(sessionData.issues.length === 0) {
+                 container.innerHTML = '<div class="p-8 text-center text-gray-500 bg-gray-50 rounded-lg border border-dashed border-gray-300">No issues found. You can download your data now.</div>';
+            }
+
+            sessionData.issues.forEach((issue, index) => {
                 const card = document.createElement('div');
-                card.className = `bg-white border-l-4 ${getSeverityColor(issue.severity)} rounded-r-lg shadow-sm p-6 transition-all duration-300`;
+                card.className = `bg-white border-l-4 ${getSeverityColor(issue.severity)} rounded-r-xl shadow-sm p-6 slide-up`;
+                card.style.animationDelay = `${index * 0.1}s`; // Staggered animation
                 card.id = `card-${issue.id}`;
 
-                // Strategy Options
                 let optionsHtml = issue.strategies.map(s =>
                     `<option value="${s.action_code}">${s.name}</option>`
                 ).join('');
@@ -257,20 +248,18 @@
                 card.innerHTML = `
                     <div class="flex justify-between items-start mb-4">
                         <div>
-                            <span class="inline-block px-2 py-1 text-xs font-bold rounded uppercase ${getSeverityBg(issue.severity)} mb-2">
-                                ${issue.severity}
-                            </span>
+                            <span class="px-3 py-1 text-xs font-bold rounded-full uppercase ${getSeverityBg(issue.severity)} mb-2 inline-block shadow-sm tracking-wide">${issue.severity}</span>
                             <span class="ml-2 text-xs text-gray-500 font-bold uppercase tracking-wider">${issue.type}</span>
-                            <h3 class="text-lg font-bold text-gray-800">${issue.description}</h3>
-                            <p class="text-sm text-gray-600 mt-1"><i class="fa-solid fa-triangle-exclamation mr-1"></i> ${issue.impact}</p>
+                            <h3 class="text-lg font-bold text-gray-800 mt-1">${issue.description}</h3>
+                            <p class="text-sm text-gray-600 mt-2 flex items-center"><i class="fa-solid fa-triangle-exclamation mr-2 text-yellow-500"></i> ${issue.impact}</p>
                         </div>
                     </div>
-                    <div class="bg-gray-50 p-4 rounded-lg flex items-center justify-between">
+                    <div class="bg-gray-50 p-4 rounded-lg flex items-center justify-between border border-gray-100">
                         <div class="text-sm text-gray-600">
-                            <strong>Recommended Action:</strong>
-                            <p class="text-xs text-gray-500">${issue.strategies[0].description}</p>
+                            <strong class="text-gray-800">Recommended Action:</strong>
+                            <p class="text-xs text-gray-500 mt-0.5">${issue.strategies[0].description}</p>
                         </div>
-                        <select id="select-${issue.id}" class="bg-white border border-gray-300 text-gray-700 py-2 px-4 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 transition-shadow">
+                        <select id="select-${issue.id}" class="bg-white border border-gray-300 text-gray-700 py-2 px-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition shadow-sm cursor-pointer">
                             ${optionsHtml}
                         </select>
                     </div>
@@ -282,42 +271,24 @@
         function renderHealthChart() {
             const ctx = document.getElementById('healthChart').getContext('2d');
 
-            // Calculate aggregated issue data
             let issueCounts = {};
-            let totalAffectedRows = 0; // Approximate (duplicates might overlap)
-
+            let totalAffectedRows = 0;
             sessionData.issues.forEach(issue => {
-                if (!issueCounts[issue.type]) {
-                    issueCounts[issue.type] = 0;
-                }
+                if (!issueCounts[issue.type]) issueCounts[issue.type] = 0;
                 issueCounts[issue.type] += issue.row_count;
                 totalAffectedRows += issue.row_count;
             });
 
-            // "Clean" rows is total - affected (simplified logic, assuming no overlap for visual)
-            // Ideally backend gives us exact 'clean rows', but this approximation works for UX
             let cleanRows = Math.max(0, sessionData.total_rows - totalAffectedRows);
-
-            // If rows < affected (due to multiple issues per row), clamp clean to 0
-            if (totalAffectedRows > sessionData.total_rows) {
-                cleanRows = 0;
-                // Normalize for the pie chart so it doesn't look weird
-            }
+            if (totalAffectedRows > sessionData.total_rows) cleanRows = 0;
 
             const data = {
-                labels: ['Clean Data', ...Object.keys(issueCounts)],
+                labels: ['Clean', ...Object.keys(issueCounts)],
                 datasets: [{
                     data: [cleanRows, ...Object.values(issueCounts)],
-                    backgroundColor: [
-                        '#10B981', // Green for clean
-                        '#F59E0B', // Yellow
-                        '#EF4444', // Red
-                        '#3B82F6', // Blue
-                        '#8B5CF6', // Purple
-                        '#EC4899'  // Pink
-                    ],
-                    borderWidth: 0,
-                    hoverOffset: 4
+                    backgroundColor: ['#10B981', '#F59E0B', '#EF4444', '#3B82F6', '#8B5CF6', '#EC4899'],
+                    borderWidth: 2,
+                    borderColor: '#ffffff'
                 }]
             };
 
@@ -326,126 +297,26 @@
                 data: data,
                 options: {
                     responsive: true,
-                    cutout: '70%',
+                    maintainAspectRatio: false,
+                    cutout: '65%',
                     plugins: {
-                        legend: { display: false },
-                        tooltip: {
-                            callbacks: {
-                                label: function(context) {
-                                    let label = context.label || '';
-                                    let value = context.raw || 0;
-                                    let total = context.dataset.data.reduce((a, b) => a + b, 0);
-                                    let percentage = ((value / total) * 100).toFixed(1) + '%';
-                                    return `${label}: ${value} rows (${percentage})`;
-                                }
+                        legend: {
+                            display: true,
+                            position: 'right',
+                            labels: {
+                                boxWidth: 12,
+                                font: { size: 11, family: 'sans-serif' },
+                                padding: 15,
+                                usePointStyle: true
                             }
-                        }
+                        },
+                        tooltip: { enabled: false }
                     }
                 }
             };
 
-            if (healthChart) {
-                healthChart.destroy();
-            }
+            if (healthChart) healthChart.destroy();
             healthChart = new Chart(ctx, config);
-        }
-
-        function getSeverityColor(sev) {
-            if (sev === 'High') return 'border-red-500';
-            if (sev === 'Medium') return 'border-yellow-500';
-            return 'border-blue-500';
-        }
-        function getSeverityBg(sev) {
-            if (sev === 'High') return 'bg-red-100 text-red-800';
-            if (sev === 'Medium') return 'bg-yellow-100 text-yellow-800';
-            return 'bg-blue-100 text-blue-800';
-        }
-
-        async function fetchAiInsights() {
-            if (!sessionId) return;
-            try {
-                const res = await fetch(`/api/session/${sessionId}/analyze`);
-                const data = await res.json();
-
-                document.getElementById('ai-insight-text').innerText = data.insight;
-
-                currentAiPlan = data.recommended_actions;
-                if (currentAiPlan.length > 0) {
-                    document.getElementById('ai-actions').classList.remove('hidden');
-                }
-            } catch (err) {
-                console.error("Failed to fetch insights", err);
-            }
-        }
-
-        function applyAiPlan() {
-            if (currentAiPlan.length === 0) return;
-
-            const changesList = document.getElementById('plan-details-content');
-            changesList.innerHTML = '';
-            let changesCount = 0;
-
-            currentAiPlan.forEach(action => {
-                const select = document.getElementById(`select-${action.issue_id}`);
-                if (select) {
-                    // Update UI Dropdown
-                    select.value = action.strategy_code;
-
-                    // Visual feedback on card
-                    const card = document.getElementById(`card-${action.issue_id}`);
-                    card.classList.add('ring-2', 'ring-blue-400');
-                    setTimeout(() => card.classList.remove('ring-2', 'ring-blue-400'), 1000);
-
-                    // Build Modal Item
-                    const issue = sessionData.issues.find(i => i.id === action.issue_id);
-                    if (issue) {
-                        const strategy = issue.strategies.find(s => s.action_code === action.strategy_code);
-                        const strategyName = strategy ? strategy.name : action.strategy_code;
-
-                        const item = document.createElement('div');
-                        item.className = "flex items-start gap-3 p-3 bg-gray-50 rounded-lg border border-gray-100 hover:bg-blue-50 transition-colors";
-                        item.innerHTML = `
-                            <div class="mt-1 flex-shrink-0"><i class="fa-solid fa-check-circle text-green-500"></i></div>
-                            <div>
-                                <p class="text-sm font-semibold text-gray-800">${issue.description}</p>
-                                <p class="text-xs text-blue-600 mt-1">
-                                    <span class="text-gray-500">Action set to:</span>
-                                    <span class="font-bold">${strategyName}</span>
-                                </p>
-                            </div>
-                        `;
-                        changesList.appendChild(item);
-                        changesCount++;
-                    }
-                }
-            });
-
-            if (changesCount > 0) {
-                openModal();
-            }
-        }
-
-        function openModal() {
-            const modal = document.getElementById('plan-details-modal');
-            const panel = document.getElementById('modal-panel');
-            modal.classList.remove('hidden');
-            // Allow DOM render then animate
-            setTimeout(() => {
-                modal.classList.remove('opacity-0');
-                panel.classList.remove('scale-95');
-                panel.classList.add('scale-100');
-            }, 10);
-        }
-
-        function closeModal() {
-            const modal = document.getElementById('plan-details-modal');
-            const panel = document.getElementById('modal-panel');
-            modal.classList.add('opacity-0');
-            panel.classList.remove('scale-100');
-            panel.classList.add('scale-95');
-            setTimeout(() => {
-                modal.classList.add('hidden');
-            }, 300);
         }
 
         async function applyFixes() {
@@ -459,9 +330,19 @@
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({ fixes })
             });
-
             const report = await res.json();
-            showReport(report);
+
+            fullAuditLog = [...fullAuditLog, ...report.actions_taken];
+
+            if (report.remaining_issues.length > 0) {
+                sessionData.issues = report.remaining_issues;
+                sessionData.total_rows = report.rows_after;
+                renderDashboard();
+                showToast(`Cycle complete. ${report.remaining_issues.length} issues remaining.`);
+                fetchAiInsights();
+            } else {
+                showReport(report);
+            }
         }
 
         function showReport(report) {
@@ -469,14 +350,85 @@
             document.getElementById('report-section').classList.remove('hidden');
 
             const log = document.getElementById('audit-log');
-            log.innerHTML = report.actions_taken.map(a => `<li class="border-b py-1">${a}</li>`).join('');
+            log.innerHTML = fullAuditLog.map((a, i) =>
+                `<li class="border-b border-gray-100 py-3 flex items-start gap-3 slide-up" style="animation-delay: ${i*0.05}s">
+                    <i class="fa-solid fa-check-circle text-green-500 mt-1"></i>
+                    <span class="text-gray-700">${a}</span>
+                </li>`
+            ).join('');
 
             const recs = document.getElementById('chart-recs');
             recs.innerHTML = report.chart_recommendations.map(r =>
-                `<span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium border border-blue-200">${r}</span>`
+                `<span class="bg-blue-50 text-blue-700 px-4 py-2 rounded-lg text-sm font-semibold border border-blue-100 shadow-sm flex items-center gap-2">
+                    <i class="fa-solid fa-chart-simple"></i> ${r}
+                </span>`
             ).join('');
 
             document.getElementById('download-btn').href = report.download_url;
+        }
+
+        function getSeverityColor(sev) { return sev === 'High' ? 'border-red-500' : sev === 'Medium' ? 'border-yellow-500' : 'border-blue-500'; }
+        function getSeverityBg(sev) { return sev === 'High' ? 'bg-red-100 text-red-800' : sev === 'Medium' ? 'bg-yellow-100 text-yellow-800' : 'bg-blue-100 text-blue-800'; }
+
+        async function fetchAiInsights() {
+            try {
+                const res = await fetch(`/api/session/${sessionId}/analyze`);
+                const data = await res.json();
+                document.getElementById('ai-insight-text').innerText = data.insight;
+                currentAiPlan = data.recommended_actions;
+                if (currentAiPlan.length > 0) document.getElementById('ai-actions').classList.remove('hidden');
+                else document.getElementById('ai-actions').classList.add('hidden');
+            } catch (err) { console.error(err); }
+        }
+
+        function applyAiPlan() {
+            const list = document.getElementById('plan-details-content');
+            list.innerHTML = '';
+            currentAiPlan.forEach(action => {
+                const select = document.getElementById(`select-${action.issue_id}`);
+                if (select) {
+                    select.value = action.strategy_code;
+                    const issue = sessionData.issues.find(i => i.id === action.issue_id);
+                    if (issue) {
+                        const div = document.createElement('div');
+                        div.className = "flex items-start gap-3 p-4 bg-gray-50 rounded-xl border border-gray-100 transition hover:bg-white hover:shadow-sm";
+                        div.innerHTML = `
+                            <div class="mt-1 flex-shrink-0 bg-green-100 text-green-600 rounded-full w-6 h-6 flex items-center justify-center">
+                                <i class="fa-solid fa-check text-xs"></i>
+                            </div>
+                            <div>
+                                <p class="text-sm font-bold text-gray-800">${issue.description}</p>
+                                <p class="text-xs text-blue-600 mt-1 font-medium bg-blue-50 inline-block px-2 py-0.5 rounded">Action: ${action.strategy_code}</p>
+                            </div>
+                        `;
+                        list.appendChild(div);
+                    }
+                }
+            });
+            openModal();
+        }
+
+        function openModal() {
+            const modal = document.getElementById('plan-details-modal');
+            const panel = document.getElementById('modal-panel');
+            modal.classList.remove('hidden');
+            setTimeout(() => { modal.classList.remove('opacity-0'); panel.classList.remove('scale-95'); panel.classList.add('scale-100'); }, 10);
+        }
+
+        function closeModal() {
+            const modal = document.getElementById('plan-details-modal');
+            const panel = document.getElementById('modal-panel');
+            modal.classList.add('opacity-0');
+            panel.classList.remove('scale-100');
+            panel.classList.add('scale-95');
+            setTimeout(() => { modal.classList.add('hidden'); }, 300);
+        }
+
+        function showToast(msg) {
+            const t = document.getElementById('toast');
+            document.getElementById('toast-msg').innerText = msg;
+            t.classList.remove('translate-y-32');
+            setTimeout(() => t.classList.add('translate-y-32'), 3000);
         }
     </script>
 </body>

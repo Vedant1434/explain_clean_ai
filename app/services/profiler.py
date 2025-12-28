@@ -22,7 +22,7 @@ class ProfilerService:
                     ResolutionStrategy(name="Ignore", description="Keep data as is", action_code="ignore")
                 ]
 
-                # Context-Aware Strategy Injection
+                # Context-Aware Strategies
                 if pd.api.types.is_numeric_dtype(df[col]):
                     strategies.insert(1, ResolutionStrategy(name="Fill with Median",
                                                             description="Robust fill for skewed data",
@@ -70,10 +70,9 @@ class ProfilerService:
                 ]
             ))
 
-        # 3. Numeric Outliers (Skip IDs)
+        # 3. Numeric Outliers (Skipping IDs)
         numeric_cols = df.select_dtypes(include=[np.number]).columns
         for col in numeric_cols:
-            # Smart Skip: Don't check ID columns for outliers
             if "id" in col.lower() or "key" in col.lower() or "code" in col.lower():
                 continue
 
@@ -84,7 +83,7 @@ class ProfilerService:
 
             if outliers > 0:
                 pct = (outliers / len(df)) * 100
-                if 0 < pct < 15:  # Only flag if it's a small percentage (true outliers)
+                if 0 < pct < 15:
                     issues.append(DetectedIssue(
                         id=str(uuid.uuid4()),
                         type=IssueType.OUTLIERS,
@@ -105,11 +104,10 @@ class ProfilerService:
         # 4. Inconsistent Types (Numbers as Strings)
         object_cols = df.select_dtypes(include=['object']).columns
         for col in object_cols:
-            # Try to force convert to numeric
             numeric_conversion = pd.to_numeric(df[col], errors='coerce')
             num_valid = numeric_conversion.notna().sum()
 
-            # If >80% are numbers but the column is Object, it's a dirty numeric column
+            # If >80% are numbers but column is Object
             if num_valid > 0.8 * len(df) and num_valid < len(df):
                 issues.append(DetectedIssue(
                     id=str(uuid.uuid4()),
@@ -128,13 +126,10 @@ class ProfilerService:
 
         # 5. Text Inconsistency (Case sensitivity)
         for col in object_cols:
-            if df[col].nunique() < 50:  # Only check low cardinality columns
-                # Count unique values
+            if df[col].nunique() < 50:
                 unique_vals = df[col].dropna().unique()
-                # Count unique values if we lower-case everything
                 unique_lower = set(x.lower() for x in unique_vals if isinstance(x, str))
 
-                # If lowering case reduces unique count, we have inconsistencies (e.g. "North" vs "north")
                 if len(unique_lower) < len(unique_vals):
                     issues.append(DetectedIssue(
                         id=str(uuid.uuid4()),
